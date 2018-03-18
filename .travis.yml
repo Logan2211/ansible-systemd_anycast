@@ -1,0 +1,86 @@
+language: python
+cache:
+  timeout: 3600
+  pip: true
+  directories:
+    - $HOME/.docker
+services:
+  - docker
+env:
+  global:
+    - ANSIBLE_FORCE_COLOR=1
+    - docker_image=quay.io/loganv/docker-ci
+    - docker_command=/lib/systemd/systemd
+    - cache_dir=$HOME/.docker
+  matrix:
+    # LINTERS
+    - TOXENV=linters
+      CACHE_NAME=linters
+    # ANSIBLE 2.2
+    - >
+      TOXENV=functional_2.2
+      docker_image_tag=ubuntu-xenial
+      CACHE_NAME=xenial
+    - >
+      TOXENV=functional_2.2
+      docker_image_tag=centos-7
+      CACHE_NAME=cent7
+    # ANSIBLE 2.3
+    - >
+      TOXENV=functional_2.3
+      docker_image_tag=ubuntu-xenial
+      CACHE_NAME=xenial
+    - >
+      TOXENV=functional_2.3
+      docker_image_tag=centos-7
+      CACHE_NAME=cent7
+    - >
+      TOXENV=functional_2.3
+      docker_image_tag=opensuse-42.2
+      CACHE_NAME=suse42
+      docker_command=/usr/lib/systemd/systemd
+    # ANSIBLE 2.4
+    - >
+      TOXENV=functional_2.4
+      docker_image_tag=ubuntu-xenial
+      CACHE_NAME=xenial
+    - >
+      TOXENV=functional_2.4
+      docker_image_tag=centos-7
+      CACHE_NAME=cent7
+    - >
+      TOXENV=functional_2.4
+      docker_image_tag=opensuse-42.2
+      CACHE_NAME=suse42
+      docker_command=/usr/lib/systemd/systemd
+    # ANSIBLE stable
+    - >
+      TOXENV=functional_stable
+      docker_image_tag=ubuntu-xenial
+      CACHE_NAME=xenial
+    - >
+      TOXENV=functional_stable
+      docker_image_tag=centos-7
+      CACHE_NAME=cent7
+    - >
+      TOXENV=functional_stable
+      docker_image_tag=opensuse-42.2
+      CACHE_NAME=suse42
+      docker_command=/usr/lib/systemd/systemd
+before_install:
+  # Load cached docker images
+  - if [[ -d ${cache_dir} ]]; then ls ${cache_dir}/*.tar.gz | xargs -I {file} sh -c "zcat {file} | docker load"; fi
+  - if [[ -n ${docker_image_tag} ]]; then docker pull ${docker_image}:${docker_image_tag}; fi
+install:
+  - pip install tox
+script:
+  - tox
+before_cache:
+  # Save tagged docker images
+  - >
+    mkdir -p ${cache_dir} && docker images -a --filter='dangling=false' --format '{{.Repository}}:{{.Tag}} {{.ID}}'
+    | xargs -n 2 -t sh -c 'test -e ${cache_dir}/$1.tar.gz || docker save $0 | gzip -2 > ${cache_dir}/$1.tar.gz'
+notifications:
+  email: false
+  slack:
+    secure: bMfdUUwyL0lAq0upqEfqki7Eq5Ve7qw23Ty4UCrPXfeFQ8JgX1+27xC/qj97j/34oRlrJLytMOiSnunJzbafS56yGeRCfOH6A3eGSvRPSc+vuIaBmbcSQjNRMnBJX9VcLVqjCOLf1qg2GwTS9YXlAXqZtRuzW8htUfbgpCXX6X0DiPJXtQlrRkAAA068yAvA1UGf+Df0t5kibKAuIjwytmFGP1OUN8AN7PdvFhGFfL4xIkFUr1D3sxZ/lAafGoZG00SGoJ1iCVq+cfVNDm1gTlU4xgNS1jnt3qbcqBFwqUOSQUjS/6oLGILWuhG9WJ5/5k1lLKhVzVZ4L4rWFwa1FBGRgtOUPulE4jj1+xjFBHlGn1mahmIOxNy1jOvMB680SXj/D9H1E1YTq3XlD3W3pq+Ptd0TFEEesU5p4zdDbzj4UeEaMiEN/uF+WmVUXG5jJRVGsvAzb+G6CbskcI/q8OChytxYHfUNXHqc4YZI219zmUZ+avn+KhkwcWNHSxd1q8WgtafMEGpID/wdcGTTQ8XGOzwp822Q4Tjj3/p1VEJJja5Vg0se8E65JOX6eBEfRV1U9kx5QKaKiIS3XoU94TwtRR6iWWubK3xzM6NgtI8taU/ifFgYZfb3Cm2eNNJipgq6ZZmkVWKkOzXIKn4zMeJTWhirld9TlSQV6na18Nw=

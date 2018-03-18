@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+{%- set _type = item.type | default(anycast_default_type) %}
+{%- if item.address is not defined %}
+{#   Address is not defined #}
+{%   set _address = [] %}
+{% elif item.address is iterable and item.address is not string %}
+{#   Address is a list, multiple addresses defined #}
+{%   set _address = item.address %}
+{% else %}
+{#   Single address defined #}
+{%   set _address = [item] %}
+{% endif %}
+{%- set _services = anycast_global_binds + item.service_binds | default([]) %}
+
+[Unit]
+Description=Anycasted network service bind
+After=network.target {{ _services | join(' ') }}
+BindsTo={{ _services | join(' ') }}
+
+[Service]
+Type=oneshot
+{% if _type == 'dummy' %}
+ExecStart=-/sbin/ip link del {{ item.interface }}
+ExecStart=/sbin/ip link add {{ item.interface }} type dummy
+{% endif %}
+{% for _addr in _address %}
+{%   if _addr is string %}
+{%       set _addr = {'address': _addr} %}
+{%   endif %}
+{%   set _addr_cidr = (_addr.address ~ '/' ~ _addr.netmask | default('')).rstrip('/') | ipaddr('host') %}
+ExecStart=/sbin/ip {{ (_addr_cidr | ipv6) | ternary('-6 ', '') }}addr add {{ _addr_cidr }} dev {{ item.interface }}
+{% endfor %}
+{% for _addr in _address %}
+{%   if _addr is string %}
+{%       set _addr = {'address': _addr} %}
+{%   endif %}
+{%   set _addr_cidr = (_addr.address ~ '/' ~ _addr.netmask | default('')).rstrip('/') | ipaddr('host')  %}
+ExecStop=-/sbin/ip {{ (_addr_cidr | ipv6) | ternary('-6 ', '') }}addr del {{ _addr_cidr }} dev {{ item.interface }}
+{% endfor %}
+{% if _type == 'dummy' %}
+ExecStop=-/sbin/ip link del {{ item.interface }}
+{% endif %}
+RemainAfterExit=true
+TimeoutStartSec=5min
+
+[Install]
+WantedBy={{ _services | join(' ') }}
