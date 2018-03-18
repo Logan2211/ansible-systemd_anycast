@@ -19,3 +19,25 @@
   hosts: test_containers
   roles:
     - role: "{{ rolename | basename }}"
+  post_tasks:
+    - name: Start the dummy anycast interface
+      service:
+        name: net-anycast-dummy_anycast.service
+        state: started
+    - name: Collect facts from the container
+      action:
+        module: setup
+    - name: Ensure the anycast interface IPs are present
+      assert:
+        that:
+          - item in ansible_all_ipv4_addresses
+      with_items:
+        - 1.2.3.4
+        - 1.2.3.5
+  vars:
+    anycast_config:
+      - interface: dummy_anycast
+        address:
+          - 1.2.3.4/32
+          - address: 1.2.3.5
+            netmask: 255.255.255.255
