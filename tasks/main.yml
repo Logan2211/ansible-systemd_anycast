@@ -1,0 +1,38 @@
+---
+# Copyright 2018, Logan Vig <logan2211@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- name: Drop the anycast service units
+  config_template:
+    src: anycast-interface.service.j2
+    dest: "/etc/systemd/system/{{ item.filename | default(anycast_default_filename) }}"
+    config_overrides: "{{ item.service_overrides | default({}) }}"
+    config_type: ini
+  with_items: "{{ anycast_config }}"
+  register: anycast_service_unit
+  notify:
+    - Reload systemd unit state
+
+# This is used to allow services to bind the anycast address before the
+# interface is activated. Our configuration will typically require this since
+# the anycast interface is not started until the service successfully starts.
+- name: Allow socket bind on non local addresses
+  sysctl:
+    name: "{{ item }}"
+    value: 1
+    sysctl_set: yes
+    state: present
+  with_items:
+    - net.ipv4.ip_nonlocal_bind
+    - net.ipv6.ip_nonlocal_bind

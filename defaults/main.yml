@@ -1,0 +1,42 @@
+---
+# Copyright 2018, Logan Vig <logan2211@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# anycast_config:
+#   - interface: dummy_anycast
+#     address:
+#       - 1.2.3.4/32
+#       - address: 1.2.3.5
+#         netmask: 255.255.255.255
+#       - fd61:8e3a:76cb:cce9::15/128
+#     service_binds:
+#       - haproxy.service
+#   - interface: eth0
+#     type: physical
+#     address: 1.2.3.6/32
+#     service_binds:
+#       - haproxy.service
+anycast_config: []
+
+# The default filename of the service unit
+anycast_default_filename: "net-anycast-{{ item.interface }}.service"
+
+# Valid types: ['dummy', 'physical']
+# When type is 'dummy', the interface will be created using ip link type dummy
+# When type is 'physical', the interface is assumed to exist already and only
+# ip addr add/del commands will be issued.
+anycast_default_type: dummy
+
+# Service unit binds that will be added to all anycast interfaces
+anycast_global_binds: []
