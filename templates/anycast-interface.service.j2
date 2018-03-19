@@ -30,6 +30,10 @@ ExecStart=/sbin/ip link add {{ item.interface }} type dummy
 {%   set _addr_cidr = (_addr.address ~ '/' ~ _addr.netmask | default('')).rstrip('/') | ipaddr('host') %}
 ExecStart=/sbin/ip {{ (_addr_cidr | ipv6) | ternary('-6 ', '') }}addr add {{ _addr_cidr }} dev {{ item.interface }}
 {% endfor %}
+{% if _type == 'dummy' %}
+ExecStart=/sbin/ip link set {{ item.interface }} up
+ExecStop=-/sbin/ip link set {{ item.interface }} down
+{% endif %}
 {% for _addr in _address %}
 {%   if _addr is string %}
 {%       set _addr = {'address': _addr} %}
